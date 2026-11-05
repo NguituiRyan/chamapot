@@ -1,7 +1,8 @@
 // Pure helpers over AG Studio's report state (AgReportState). The shell uses these to check for
 // unsaved changes and to edit pages; none of them touch the Studio API.
 
-import type { AgReportState, AgStudioMode } from 'ag-studio';
+import type { AgStudioMode } from 'ag-studio';
+import type { ChamaReportState as AgReportState } from './reports-store';
 
 // Whether `state` differs from `saved` in anything worth saving. The selected page, cross-filters,
 // selection and panel sizes also live in state, but changing them doesn't make a report unsaved.
@@ -13,11 +14,12 @@ const durable = (state: AgReportState) =>
     pages: state.pages.map(({ id, widgets, widgetLayout, layout, filter }) => ({ id, widgets, widgetLayout, layout, filter })),
   });
 
-// The filters panel starts expanded in view mode, where it's the only panel, and collapsed in
-// edit mode, where Compose and Data need the room. Panel state isn't something Save compares.
-export const withFiltersPanelFor = (mode: AgStudioMode, state: AgReportState): AgReportState => ({
+// The filters panel starts collapsed: in view mode the canvas gets the room (and phones get the
+// whole width), in edit mode Compose and Data need it. It stays one click away in both. Panel
+// state isn't something Save compares.
+export const withFiltersPanelFor = (_mode: AgStudioMode, state: AgReportState): AgReportState => ({
   ...state,
-  panels: { ...state.panels, filters: { ...state.panels?.filters, collapsed: mode === 'edit' } },
+  panels: { ...state.panels, filters: { ...state.panels?.filters, collapsed: true } },
 });
 
 // Studio leaves page navigation to the host: these add, remove and select pages in state.
@@ -42,3 +44,15 @@ export const removePage = (state: AgReportState, pageId: string): AgReportState 
 
 export const pageHasWidgets = (state: AgReportState) =>
   Object.keys(state.pages.find((p) => p.id === state.selectedPageId)?.widgets ?? {}).length > 0;
+
+// Opens the AI panel (the Claude Treasurer) and folds the edit-mode panels it shares the side with.
+export const withAiPanelOpen = (state: AgReportState): AgReportState => ({
+  ...state,
+  panels: {
+    ...state.panels,
+    ai: { width: 420, ...state.panels?.ai, collapsed: false },
+    edit: { ...state.panels?.edit, collapsed: true },
+    data: { ...state.panels?.data, collapsed: true },
+    filters: { ...state.panels?.filters, collapsed: true },
+  },
+});

@@ -6,8 +6,8 @@ import { pagesFor, type ReportPage } from '../page-titles';
 import type { SavedReport } from '../reports-store';
 import { Button, Menu, MenuItem } from './ui/ui';
 
-// Reports, each listing its pages. The open report shows its live pages (including unsaved
-// ones); the others show their saved pages. Double-click a report or page to rename it.
+// Dashboards, each listing its pages. The open dashboard shows its live pages (including unsaved
+// ones); the others show their saved pages. Double-click a dashboard or page to rename it.
 export function ReportsSidebar({
   reports,
   activeId,
@@ -25,6 +25,7 @@ export function ReportsSidebar({
   onDuplicate,
   onDelete,
   onReset,
+  onAskTreasurer,
 }: {
   reports: SavedReport[];
   activeId: string;
@@ -42,6 +43,7 @@ export function ReportsSidebar({
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onReset: () => void;
+  onAskTreasurer?: () => void;
 }) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function ReportsSidebar({
 
   return (
     <>
-      <p className="px-6 pb-2 pt-6 text-xs font-semibold uppercase tracking-wider text-pp-muted">Reports</p>
+      <p className="px-5 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--cp-muted)]">Dashboards</p>
       <ul className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
         {reports.map((report) => {
           const active = report.id === activeId;
@@ -68,7 +70,7 @@ export function ReportsSidebar({
                   <RenameInput
                     value={report.name}
                     label="Report name"
-                    className="ml-1 w-[calc(100%-8px)] py-2 text-[15px]"
+                    className="ml-1 w-[calc(100%-8px)] py-2 text-[14px]"
                     onDone={(value) => finishRename(value, (name) => onRenameReport(report.id, name))}
                     onCancel={() => setRenaming(null)}
                   />
@@ -85,11 +87,11 @@ export function ReportsSidebar({
                     }}
                     onDoubleClick={() => setRenaming(report.id)}
                     aria-expanded={open}
-                    className={`flex w-full items-center gap-3 rounded-full py-2.5 pl-4 pr-10 text-left text-[15px] transition-colors ${
-                      active ? 'font-semibold text-pp-navy' : 'text-pp-ink hover:bg-pp-canvas'
+                    className={`flex w-full items-center gap-2.5 rounded-[10px] py-2 pl-3 pr-10 text-left text-[14px] transition-colors ${
+                      active ? 'font-semibold text-[var(--cp-ink)]' : 'text-[var(--cp-ink)] hover:bg-[var(--cp-cream)]'
                     }`}
                   >
-                    <ReportIcon className={`size-5 shrink-0 ${active ? 'text-pp-blue' : ''}`} />
+                    <ReportIcon className={`size-5 shrink-0 ${active ? 'text-[var(--cp-pot)]' : 'text-[var(--cp-muted)]'}`} />
                     <span className="truncate">{report.name}</span>
                   </button>
                 )}
@@ -100,7 +102,7 @@ export function ReportsSidebar({
                     aria-haspopup="menu"
                     aria-expanded={menuFor === report.id}
                     onClick={() => setMenuFor(menuFor === report.id ? null : report.id)}
-                    className={`flex size-8 items-center justify-center rounded-full text-pp-muted hover:bg-white hover:text-pp-navy ${
+                    className={`flex size-8 items-center justify-center rounded-[8px] text-[var(--cp-muted)] hover:bg-[var(--cp-cream)] hover:text-[var(--cp-ink)] ${
                       menuFor === report.id ? 'opacity-100' : 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100'
                     }`}
                   >
@@ -137,7 +139,7 @@ export function ReportsSidebar({
               </div>
 
               {open && (
-                <ul className="mb-2 ml-[26px] mt-1 space-y-0.5 border-l border-pp-border pl-3" aria-label={`${report.name} pages`}>
+                <ul className="mb-2 ml-[21px] mt-1 space-y-0.5 border-l border-[var(--cp-line)] pl-2.5" aria-label={`${report.name} pages`}>
                   {pages.map((page) => {
                     const selected = active && page.id === selectedPageId;
                     return (
@@ -158,8 +160,10 @@ export function ReportsSidebar({
                             onDoubleClick={() => active && editing && setRenaming(page.id)}
                             aria-current={selected ? 'page' : undefined}
                             title={active && editing ? 'Double-click to rename' : undefined}
-                            className={`block w-full truncate rounded-full py-2 pl-4 pr-8 text-left text-sm transition-colors ${
-                              selected ? 'bg-pp-highlight font-semibold text-pp-blue' : 'text-pp-muted hover:bg-pp-canvas hover:text-pp-navy'
+                            className={`block w-full truncate rounded-[8px] py-1.5 pl-3 pr-8 text-left text-sm transition-colors ${
+                              selected
+                                ? 'bg-[var(--cp-pot-soft)] font-semibold text-[var(--cp-pot-deep)] shadow-[inset_3px_0_0_var(--cp-pot)]'
+                                : 'text-[var(--cp-muted)] hover:bg-[var(--cp-cream)] hover:text-[var(--cp-ink)]'
                             }`}
                           >
                             {page.title}
@@ -171,7 +175,7 @@ export function ReportsSidebar({
                             aria-label={`Remove page ${page.title}`}
                             title="Remove page"
                             onClick={() => onRemovePage(page.id)}
-                            className="absolute right-1.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-pp-muted opacity-0 hover:bg-white hover:text-pp-danger focus-visible:opacity-100 group-hover:opacity-100"
+                            className="absolute right-1.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--cp-muted)] opacity-0 hover:bg-white hover:text-[var(--cp-danger)] focus-visible:opacity-100 group-hover:opacity-100"
                           >
                             <CloseIcon className="size-3.5" />
                           </button>
@@ -188,7 +192,7 @@ export function ReportsSidebar({
                           const id = onAddPage();
                           if (id) setRenaming(id);
                         }}
-                        className="flex w-full items-center gap-1.5 rounded-full py-2 pl-4 text-left text-sm font-semibold text-pp-blue hover:bg-pp-highlight"
+                        className="flex w-full items-center gap-1.5 rounded-[8px] py-1.5 pl-3 text-left text-sm font-semibold text-[var(--cp-pot-deep)] hover:bg-[var(--cp-pot-soft)]"
                       >
                         <PlusIcon className="size-4" /> Add page
                       </button>
@@ -200,13 +204,27 @@ export function ReportsSidebar({
           );
         })}
       </ul>
-      <div className="border-t border-pp-border p-4">
+      <div className="space-y-3 border-t border-[var(--cp-line)] p-4">
+        <div className="rounded-[12px] border border-[var(--cp-line)] bg-[var(--cp-cream)] p-3 text-xs leading-relaxed text-[var(--cp-muted)]">
+          <p className="mb-1 font-semibold text-[var(--cp-ink)]">Claude Treasurer</p>
+          Ask “who’s behind?”, send PayPal reminders or build a widget. It proposes payouts; only two officials can release money.
+          {onAskTreasurer && (
+            <button
+              type="button"
+              onClick={onAskTreasurer}
+              disabled={!ready}
+              className="mt-2 block font-semibold text-[var(--cp-pot-deep)] hover:underline"
+            >
+              Ask the Treasurer →
+            </button>
+          )}
+        </div>
         <Button variant="primary" className="w-full" onClick={onCreate}>
-          <PlusIcon /> New report
+          <PlusIcon className="size-4" /> New dashboard
         </Button>
-        <p className="mt-3 text-center text-xs text-pp-muted">
-          Reports are saved in this browser.{' '}
-          <button type="button" onClick={onReset} disabled={!ready} className="font-semibold text-pp-blue hover:underline">
+        <p className="text-center text-xs text-[var(--cp-muted)]">
+          Saved in this browser.{' '}
+          <button type="button" onClick={onReset} disabled={!ready} className="font-semibold text-[var(--cp-pot-deep)] hover:underline">
             Reset demo
           </button>
         </p>
@@ -247,7 +265,7 @@ function RenameInput({
         if (e.key === 'Enter') e.currentTarget.blur();
         if (e.key === 'Escape') onCancel();
       }}
-      className={`rounded-full border border-pp-blue bg-white px-4 font-semibold text-pp-navy outline-none ${className}`}
+      className={`rounded-[8px] border border-[var(--cp-pot)] bg-white px-3 font-semibold text-[var(--cp-ink)] outline-none ${className}`}
     />
   );
 }

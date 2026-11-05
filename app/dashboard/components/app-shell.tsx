@@ -1,67 +1,60 @@
 'use client';
 
+import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { BellIcon, HelpIcon } from './ui/icons';
-import { AgStudioLogo } from './ui/logo';
+import { Logo } from '@/components/logo';
+import '../chama-dashboard.css';
 
-// The app frame, laid out like the PayPal Developer Dashboard: a white top bar, a left sidebar
-// and a light canvas. Shared by the dashboard, its loading skeleton and its error page.
+// The ChamaPot app frame: a white top bar with the group and its cycle, links to the other
+// ChamaPot pages, a dashboard sidebar on wide screens and the cream canvas. Shared by the
+// dashboard, its loading skeleton and its error page.
+//
+// The root layout renders the "Built by Rytrix" footer after this frame. On wide screens the frame
+// leaves room for it, so the credit sits visible under the dashboard; on phones it follows on scroll.
 
-function PayPalWordmark({ className = '' }: { className?: string }) {
+export type ShellGroup = { name: string; cycleLine: string };
+
+export const DEFAULT_GROUP: ShellGroup = { name: 'Umoja Sisters Chama', cycleLine: 'November 2026 · cycle 7 of 10' };
+
+export const APP_LINKS = [
+  { href: '/rules', label: 'Rules' },
+  { href: '/approvals', label: 'Approvals' },
+  { href: '/activity', label: 'Activity' },
+] as const;
+
+function TopBar({ group }: { group: ShellGroup }) {
   return (
-    <span className={`font-bold italic tracking-tight ${className}`}>
-      <span className="text-pp-blue-dark">Pay</span>
-      <span className="text-pp-sky">Pal</span>
-    </span>
-  );
-}
-
-function BrandLockup() {
-  return (
-    <div className="flex items-center gap-3">
-      <AgStudioLogo className="-ml-3 h-12 w-auto" />
-      <span className="h-6 w-px bg-pp-border" aria-hidden />
-      <span className="flex items-baseline gap-1 text-xs text-pp-muted">
-        powered by <PayPalWordmark className="text-base" /> APIs
-      </span>
-    </div>
-  );
-}
-
-function TopBar() {
-  return (
-    <header className="flex h-16 shrink-0 items-center gap-6 border-b border-pp-border bg-white px-6">
-      <BrandLockup />
-      <div className="ml-auto flex items-center gap-1 text-pp-navy">
-        <span className="inline-flex size-9 items-center justify-center rounded-full" title="Help">
-          <HelpIcon />
-        </span>
-        <span className="inline-flex size-9 items-center justify-center rounded-full" title="Notifications">
-          <BellIcon />
-        </span>
-        <span className="ml-2 flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-full bg-pp-navy text-sm font-semibold text-white">
-            AG
-          </span>
-          <span className="hidden text-sm font-semibold sm:inline">Demo merchant</span>
-        </span>
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--cp-line)] bg-white px-4 md:gap-5 md:px-6">
+      <Logo className="-ml-1 p-1" />
+      <span className="hidden h-7 w-px bg-[var(--cp-line)] md:block" aria-hidden />
+      <div className="hidden min-w-0 leading-tight md:block">
+        <p className="truncate text-sm font-semibold text-[var(--cp-ink)]">{group.name}</p>
+        <p className="truncate text-xs text-[var(--cp-muted)]">{group.cycleLine}</p>
       </div>
+      <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="ChamaPot">
+        {APP_LINKS.map((link) => (
+          <Link key={link.href} href={link.href} className="cp-link px-3 py-1.5 text-sm">
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+      <span className="ml-auto flex items-center gap-2 md:ml-2" title="Viewing as Akinyi Odhiambo, treasurer (demo mode)">
+        <span className="flex size-8 items-center justify-center rounded-full bg-[#15803D] text-xs font-bold text-white">AO</span>
+        <span className="hidden text-left leading-tight lg:block">
+          <span className="block text-sm font-semibold text-[var(--cp-ink)]">Akinyi</span>
+          <span className="block text-xs text-[var(--cp-muted)]">Treasurer</span>
+        </span>
+      </span>
     </header>
   );
 }
 
-export function AppShell({
-  sidebar,
-  children,
-}: {
-  sidebar: ReactNode;
-  children: ReactNode;
-}) {
+export function AppShell({ sidebar, children, group = DEFAULT_GROUP }: { sidebar: ReactNode; children: ReactNode; group?: ShellGroup }) {
   return (
-    <div className="flex h-dvh flex-col bg-pp-canvas font-paypal text-pp-ink">
-      <TopBar />
+    <div className="cp-root flex h-dvh min-h-[560px] flex-col md:h-[calc(100dvh-58px)]">
+      <TopBar group={group} />
       <div className="flex min-h-0 flex-1">
-        <nav className="flex w-64 shrink-0 flex-col border-r border-pp-border bg-white" aria-label="Reports">
+        <nav className="hidden w-60 shrink-0 flex-col border-r border-[var(--cp-line)] bg-white md:flex" aria-label="Dashboards">
           {sidebar}
         </nav>
         <main className="flex min-w-0 flex-1 flex-col">{children}</main>

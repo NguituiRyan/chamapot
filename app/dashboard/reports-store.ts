@@ -1,38 +1,37 @@
-// Saved reports, kept in this browser's localStorage. Studio's state has no page names, so each
-// report carries its page titles alongside the AG Studio state.
+// Saved dashboards, kept in this browser's localStorage. Studio's state has no page names, so each
+// dashboard carries its page titles alongside the AG Studio state.
 //
 // The built-in report comes from ./studio/initial-report.ts until it is saved;
 // after that the saved copy wins until it is reset to default.
 
 import type { AgReportState } from 'ag-studio';
-import { dashboardReport } from './studio/initial-report';
+import { dashboardReport, PAGE_TITLES } from './studio/initial-report';
+import type { ChamaRegistry } from './studio/widgets';
+
+/** AG Studio report state, with the ChamaPot widget types. */
+export type ChamaReportState = AgReportState<ChamaRegistry>;
 
 export type SavedReport = {
   id: string;
   name: string;
   builtIn?: boolean;
   pageTitles: Record<string, string>;
-  state: AgReportState;
+  state: ChamaReportState;
   updatedAt: string;
 };
 
 export type StoredReports = { reports: SavedReport[]; activeId: string };
 
-const STORAGE_KEY = 'ag-paypal-demo:reports:v1';
+const STORAGE_KEY = 'chamapot:dashboards:v1';
 
-export const BUILT_IN_ID = 'paypal-overview';
+export const BUILT_IN_ID = 'treasurer-dashboard';
 
-// Sidebar titles for the built-in report's pages, keyed by page id in initial-report.ts.
-const defaultPageTitles: Record<string, string> = {
-  revenue: 'Revenue',
-  receivables: 'Receivables',
-  cash: 'Cash & payouts',
-  catalogue: 'Catalogue',
-};
+// Sidebar titles for the built-in dashboard's pages, keyed by page id in initial-report.ts.
+const defaultPageTitles: Record<string, string> = PAGE_TITLES;
 
 export const defaultReport = (): SavedReport => ({
   id: BUILT_IN_ID,
-  name: 'PayPal overview',
+  name: 'Treasurer dashboard',
   builtIn: true,
   pageTitles: defaultPageTitles,
   state: dashboardReport,

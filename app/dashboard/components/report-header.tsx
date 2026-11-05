@@ -1,16 +1,30 @@
 'use client';
 
-import { useSyncExternalStore, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Sparkles } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
+import type { LiveStatus } from '../studio/live';
+import { APP_LINKS, type ShellGroup } from './app-shell';
 import { EditIcon, EyeIcon, RedoIcon, RefreshIcon, UndoIcon } from './ui/icons';
 import { Button, IconButton } from './ui/ui';
+import type { ReportPage } from '../page-titles';
 
-// The bar above Studio: which report and page you're on, how fresh the data is, and the
-// Edit / Save / Discard controls.
+// The bar above Studio: which page you're on, whether PayPal webhooks are streaming in, and the
+// Edit / Save / Discard controls. On phones it also carries the group, the page tabs and the
+// links that live in the top bar and sidebar on wider screens.
 export function ReportHeader({
-  reportName,
+  group,
   pageTitle,
-  asOf,
+  pages,
+  selectedPageId,
+  onSelectPage,
+  live,
+  lastUpdate,
+  refreshing,
+  onRefresh,
+  onAskTreasurer,
+  focus,
+  onClearFocus,
   editing,
   pageIsEmpty,
   canUndo,
@@ -21,9 +35,19 @@ export function ReportHeader({
   onDiscard,
   onEditingChange,
 }: {
-  reportName: string;
+  group: ShellGroup;
   pageTitle?: string;
-  asOf: string;
+  pages: ReportPage[];
+  selectedPageId: string;
+  onSelectPage: (pageId: string) => void;
+  live: LiveStatus;
+  lastUpdate: string;
+  refreshing: boolean;
+  onRefresh: () => void;
+  /** Opens the Claude Treasurer in Studio's AI panel; omitted when AI isn't configured. */
+  onAskTreasurer?: () => void;
+  focus: string | null;
+  onClearFocus: () => void;
   editing: boolean;
   pageIsEmpty: boolean;
   canUndo: boolean;
@@ -35,50 +59,106 @@ export function ReportHeader({
   onEditingChange: (editing: boolean) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-pp-border bg-white px-8 py-5">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-pp-muted">{reportName}</p>
-        <h1 className="truncate text-[28px] font-semibold leading-tight text-pp-navy">{pageTitle}</h1>
-        <DataFreshness asOf={asOf} />
-      </div>
-      <div className="flex items-center gap-2">
-        {editing && pageIsEmpty && (
-          <p className="mr-2 text-sm text-pp-muted">
-            Drag a widget from <span className="font-semibold text-pp-navy">Compose</span> to get started.
+    <div className="shrink-0 border-b border-[var(--cp-line)] bg-white">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3 px-4 pb-3 pt-3 md:px-6 md:pt-4">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-[var(--cp-muted)] md:hidden">
+            {group.name} · {group.cycleLine}
           </p>
-        )}
-        {editing && (
-          <>
-            <IconButton label="Undo" disabled={!canUndo} onClick={onUndo}>
-              <UndoIcon />
-            </IconButton>
-            <IconButton label="Redo" disabled={!canRedo} onClick={onRedo}>
-              <RedoIcon />
-            </IconButton>
-            <span className="mx-2 h-6 w-px bg-pp-border" aria-hidden />
-            <Button onClick={onDiscard} size="sm">
-              Discard
+          <p className="hidden truncate text-xs font-semibold uppercase tracking-[0.12em] text-[var(--cp-muted)] md:block">Treasurer dashboard</p>
+          <h1 className="cp-display truncate text-[26px] leading-tight text-[var(--cp-ink)] md:text-[28px]">{pageTitle}</h1>
+          <Freshness live={live} lastUpdate={lastUpdate} refreshing={refreshing} onRefresh={onRefresh} />
+        </div>
+        <div className="hidden items-center gap-2 md:flex">
+          {editing && pageIsEmpty && (
+            <p className="mr-2 text-sm text-[var(--cp-muted)]">
+              Drag a widget from <span className="font-semibold text-[var(--cp-ink)]">Compose</span> to start.
+            </p>
+          )}
+          {editing && (
+            <>
+              <IconButton label="Undo" disabled={!canUndo} onClick={onUndo}>
+                <UndoIcon />
+              </IconButton>
+              <IconButton label="Redo" disabled={!canRedo} onClick={onRedo}>
+                <RedoIcon />
+              </IconButton>
+              <span className="mx-1 h-6 w-px bg-[var(--cp-line)]" aria-hidden />
+              <Button onClick={onDiscard} size="sm">
+                Discard
+              </Button>
+              <Button variant="primary" size="sm" onClick={onSave}>
+                Save
+              </Button>
+            </>
+          )}
+          {onAskTreasurer && (
+            <button
+              type="button"
+              onClick={onAskTreasurer}
+              className="cp-btn cp-btn-sm border-[var(--cp-marigold)] bg-[var(--cp-marigold-soft)] text-[var(--cp-ink)] hover:border-[var(--cp-marigold)] hover:bg-[#fbe6c2]"
+            >
+              <Sparkles className="size-4 text-[#B7791F]" aria-hidden /> Ask the Treasurer
+            </button>
+          )}
+          {editing ? (
+            <Button variant="ghost" size="sm" onClick={() => onEditingChange(false)}>
+              <EyeIcon className="size-4" /> View
             </Button>
-            <Button variant="primary" size="sm" onClick={onSave}>
-              Save
+          ) : (
+            <Button size="sm" onClick={() => onEditingChange(true)}>
+              <EditIcon className="size-4" /> Edit dashboard
             </Button>
-          </>
-        )}
-        {editing ? (
-          <Button variant="ghost" size="sm" onClick={() => onEditingChange(false)}>
-            <EyeIcon className="size-4" /> View
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => onEditingChange(true)}>
-            <EditIcon className="size-4" /> Edit
-          </Button>
-        )}
+          )}
+        </div>
+      </div>
+
+      {focus && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--cp-line-soft)] bg-[var(--cp-marigold-soft)] px-4 py-2 text-sm md:px-6">
+          <span className="font-semibold text-[var(--cp-ink)]">Drill-through: {focus}</span>
+          <span className="text-[var(--cp-muted)]">Every widget shows only her contributions and payouts.</span>
+          <button type="button" onClick={onClearFocus} className="cp-btn cp-btn-sm ml-auto">
+            Show the whole chama
+          </button>
+        </div>
+      )}
+
+      {/* Phones: page tabs and app links, which live in the sidebar and top bar on wider screens. */}
+      <div className="md:hidden">
+        <div className="cp-tabs flex gap-1.5 overflow-x-auto px-4 pb-2" role="tablist" aria-label="Dashboard pages">
+          {pages.map((page) => {
+            const selected = page.id === selectedPageId;
+            return (
+              <button
+                key={page.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => onSelectPage(page.id)}
+                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                  selected
+                    ? 'border-[var(--cp-pot)] bg-[var(--cp-pot)] text-white'
+                    : 'border-[var(--cp-line)] bg-white text-[var(--cp-ink)]'
+                }`}
+              >
+                {page.title}
+              </button>
+            );
+          })}
+        </div>
+        <nav className="flex gap-4 border-t border-[var(--cp-line-soft)] px-4 py-2 text-sm" aria-label="ChamaPot">
+          {APP_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="font-semibold text-[var(--cp-pot-deep)]">
+              {link.label} →
+            </Link>
+          ))}
+        </nav>
       </div>
     </div>
   );
 }
 
-// --- Data freshness -----------------------------------------------------------------
+// --- Live status and freshness ------------------------------------------------------
 
 const MINUTE_MS = 60_000;
 let now = 0;
@@ -87,7 +167,7 @@ const subscribeNow = (listener: () => void) => {
   const id = setInterval(() => {
     now = Date.now();
     listener();
-  }, 30_000);
+  }, 20_000);
   return () => clearInterval(id);
 };
 
@@ -99,31 +179,35 @@ function relativeTime(iso: string, at: number) {
   return hours < 24 ? `${hours} h ago` : new Date(iso).toLocaleDateString('en-GB');
 }
 
-function DataFreshness({ asOf }: { asOf: string }) {
-  const router = useRouter();
-  const [refreshing, startRefresh] = useTransition();
-  const at = useSyncExternalStore(subscribeNow, () => now, () => 0);
+const LIVE_LABEL: Record<LiveStatus, string> = {
+  live: 'Live · PayPal webhooks',
+  connecting: 'Connecting to PayPal webhooks…',
+  offline: 'Live updates paused',
+};
 
+function Freshness({ live, lastUpdate, refreshing, onRefresh }: { live: LiveStatus; lastUpdate: string; refreshing: boolean; onRefresh: () => void }) {
+  const at = useSyncExternalStore(subscribeNow, () => now, () => 0);
   return (
-    <p className="mt-1 flex items-center gap-2 text-sm text-pp-muted">
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-2 rounded-full bg-pp-success" aria-hidden />
-        PayPal sandbox
+    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[var(--cp-muted)]">
+      <span
+        className="inline-flex items-center gap-2 rounded-full border border-[var(--cp-line)] bg-[var(--cp-cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--cp-ink)]"
+        role="status"
+        title={live === 'live' ? 'Supabase realtime is streaming PayPal webhook updates into the dashboard' : undefined}
+      >
+        <span className="cp-live-dot" data-state={live} aria-hidden />
+        {LIVE_LABEL[live]}
       </span>
-      <span aria-hidden>·</span>
-      <span title={new Date(asOf).toLocaleString('en-GB')}>
-        {refreshing ? 'Refreshing…' : `Updated ${at ? relativeTime(asOf, at) : new Date(asOf).toLocaleTimeString('en-GB')}`}
-      </span>
+      <span className="text-xs">{refreshing ? 'Refreshing…' : `Updated ${at ? relativeTime(lastUpdate, at) : 'just now'}`}</span>
       <button
         type="button"
-        onClick={() => startRefresh(() => router.refresh())}
+        onClick={onRefresh}
         disabled={refreshing}
-        aria-label="Refresh data"
-        title="Refresh data"
-        className="inline-flex size-7 items-center justify-center rounded-full text-pp-blue hover:bg-pp-highlight disabled:text-pp-muted"
+        aria-label="Refresh from the ledger"
+        title="Refresh from the ledger"
+        className="cp-icon-btn size-7"
       >
         <RefreshIcon className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
       </button>
-    </p>
+    </div>
   );
 }

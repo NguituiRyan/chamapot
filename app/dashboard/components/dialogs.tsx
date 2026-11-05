@@ -44,7 +44,7 @@ export function UnsavedChangesDialog({
         </>
       }
     >
-      Your changes to this report haven&apos;t been saved yet.
+      Your changes to this dashboard haven&apos;t been saved yet.
     </Dialog>
   );
 }
@@ -62,7 +62,7 @@ export function CreateReportDialog({
   return (
     <Dialog
       open={open}
-      title="New report"
+      title="New dashboard"
       onClose={onClose}
       actions={
         <>
@@ -70,7 +70,7 @@ export function CreateReportDialog({
             Cancel
           </Button>
           <Button variant="primary" type="submit" form={formId}>
-            Create report
+            Create dashboard
           </Button>
         </>
       }
@@ -80,27 +80,27 @@ export function CreateReportDialog({
         onSubmit={(e) => {
           e.preventDefault();
           const name = String(new FormData(e.currentTarget).get('name') ?? '').trim();
-          onCreate(name || 'Untitled report');
+          onCreate(name || 'Untitled dashboard');
         }}
       >
-        <p>Start from a blank page and build it with the widgets in Compose.</p>
-        <label className="mt-4 block text-sm font-semibold text-pp-navy" htmlFor="report-name">
-          Report name
+        <p>Start from a blank page and build it with the widgets in Compose, including the ChamaPot pot, rotation and approval widgets.</p>
+        <label className="mt-4 block text-sm font-semibold text-[var(--cp-ink)]" htmlFor="report-name">
+          Dashboard name
         </label>
         <input
           id="report-name"
           name="name"
           autoFocus
-          defaultValue="Untitled report"
+          defaultValue="Untitled dashboard"
           onFocus={(e) => e.currentTarget.select()}
-          className="mt-1 h-11 w-full rounded border border-pp-border px-3 text-[15px] text-pp-ink outline-none focus:border-pp-blue focus:ring-2 focus:ring-pp-highlight"
+          className="mt-1 h-11 w-full rounded-[10px] border border-[var(--cp-line)] px-3 text-[15px] text-[var(--cp-ink)] outline-none focus:border-[var(--cp-pot)] focus:ring-2 focus:ring-[var(--cp-pot-soft)]"
         />
       </form>
     </Dialog>
   );
 }
 
-/** Deletes a report, or resets the built-in one to the version shipped with the app. */
+/** Deletes a dashboard, or resets the built-in one to the version shipped with the app. */
 export function DeleteReportDialog({
   report,
   onCancel,
@@ -113,7 +113,7 @@ export function DeleteReportDialog({
   return (
     <Dialog
       open={report !== null}
-      title={report?.builtIn ? 'Reset to default?' : 'Delete report?'}
+      title={report?.builtIn ? 'Reset to default?' : 'Delete dashboard?'}
       onClose={onCancel}
       actions={
         <>
@@ -161,7 +161,7 @@ export function ResetDemoDialog({
         </>
       }
     >
-      All reports you&apos;ve created will be deleted and “{builtInName}” will go back to its original state,
+      All dashboards you&apos;ve created will be deleted and “{builtInName}” will go back to its original state,
       including any unsaved changes. This can&apos;t be undone.
     </Dialog>
   );

@@ -1,0 +1,305 @@
+/*
+ * ChamaPot dashboard tokens and component styles. Scoped to the dashboard (prefixed --cp-) so the
+ * dashboard never depends on, or collides with, the site-wide tokens in app/globals.css. Values are
+ * the brand tokens from docs/CONTRACTS.md; app/dashboard/studio/theme.ts mirrors them for AG Studio.
+ */
+:root {
+  --cp-ink: #12261f;
+  --cp-pot: #0e7c66;
+  --cp-pot-deep: #0a5a4a;
+  --cp-pot-soft: #e3f1ec;
+  --cp-marigold: #f2a93b;
+  --cp-marigold-soft: #fdf1dc;
+  --cp-clay: #c2410c;
+  --cp-clay-soft: #fbe9e1;
+  --cp-cream: #fbf7f0;
+  --cp-card: #ffffff;
+  --cp-line: #e6ded0;
+  --cp-line-soft: #f0eadf;
+  --cp-muted: #5e6b66;
+  --cp-success: #15803d;
+  --cp-danger: #b91c1c;
+  --cp-display: var(--font-display), "Fraunces", Georgia, serif;
+  --cp-sans: var(--font-sans), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/*
+ * The dashboard is light-only (AG Studio's theme uses literal light values), so shared ChamaPot
+ * components rendered inside it (the Logo from components/logo.tsx) keep their light tokens even
+ * when the rest of the site follows a dark system theme.
+ */
+.cp-root {
+  color-scheme: light;
+  --ink: #12261f;
+  --pot: #0e7c66;
+  --pot-deep: #0a5a4a;
+  --pot-ink: #0e7c66;
+  --pot-soft: #e3f1ec;
+  --marigold: #f2a93b;
+  --marigold-ink: #8a5300;
+  --marigold-soft: #fdf0d9;
+  --clay: #c2410c;
+  --clay-soft: #fbe9df;
+  --cream: #fbf7f0;
+  --card: #ffffff;
+  --sunken: #f4eee3;
+  --line: #e6ded0;
+  --muted: #5e6b66;
+  --success: #15803d;
+  --danger: #b91c1c;
+}
+
+/* Component classes sit in Tailwind's components layer so utility classes can still override them. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .cp-root {
+    background: var(--cp-cream);
+    color: var(--cp-ink);
+    font-family: var(--cp-sans);
+  }
+
+  .cp-display {
+    font-family: var(--cp-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* --- Buttons ------------------------------------------------------------------------ */
+  .cp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    height: 2.25rem;
+    padding: 0 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--cp-line);
+    background: var(--cp-card);
+    color: var(--cp-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .cp-btn:hover:not(:disabled) {
+    border-color: var(--cp-pot);
+    color: var(--cp-pot-deep);
+  }
+  .cp-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .cp-btn:focus-visible,
+  .cp-icon-btn:focus-visible,
+  .cp-link:focus-visible {
+    outline: 2px solid var(--cp-pot);
+    outline-offset: 2px;
+  }
+  .cp-btn-primary {
+    background: var(--cp-pot);
+    border-color: var(--cp-pot);
+    color: #fff;
+  }
+  .cp-btn-primary:hover:not(:disabled) {
+    background: var(--cp-pot-deep);
+    border-color: var(--cp-pot-deep);
+    color: #fff;
+  }
+  .cp-btn-danger {
+    background: var(--cp-danger);
+    border-color: var(--cp-danger);
+    color: #fff;
+  }
+  .cp-btn-danger:hover:not(:disabled) {
+    filter: brightness(0.92);
+    color: #fff;
+    border-color: var(--cp-danger);
+  }
+  .cp-btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--cp-pot-deep);
+  }
+  .cp-btn-ghost:hover:not(:disabled) {
+    background: var(--cp-pot-soft);
+    border-color: transparent;
+  }
+  .cp-btn-sm {
+    height: 2rem;
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+  }
+  .cp-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 10px;
+    color: var(--cp-ink);
+    transition: background-color 0.15s;
+  }
+  .cp-icon-btn:hover:not(:disabled) {
+    background: var(--cp-pot-soft);
+  }
+  .cp-icon-btn:disabled {
+    color: var(--cp-line);
+    cursor: not-allowed;
+  }
+
+  .cp-link {
+    border-radius: 8px;
+    color: var(--cp-muted);
+    font-weight: 500;
+    transition: color 0.15s, background-color 0.15s;
+  }
+  .cp-link:hover {
+    color: var(--cp-pot-deep);
+    background: var(--cp-pot-soft);
+  }
+}
+
+/* --- Live indicator ----------------------------------------------------------------- */
+.cp-live-dot {
+  position: relative;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--cp-success);
+}
+.cp-live-dot[data-state="live"]::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 2px solid var(--cp-success);
+  opacity: 0;
+  animation: cp-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.cp-live-dot[data-state="connecting"] {
+  background: var(--cp-marigold);
+}
+.cp-live-dot[data-state="offline"] {
+  background: var(--cp-muted);
+}
+@keyframes cp-ping {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* --- Toasts ------------------------------------------------------------------------- */
+.cp-toast {
+  animation: cp-toast-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes cp-toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Page tabs on narrow screens scroll sideways without a visible scrollbar. */
+.cp-tabs {
+  scrollbar-width: none;
+}
+.cp-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* --- Custom AG Studio widgets ------------------------------------------------------- */
+.cp-widget {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  font-family: var(--cp-sans);
+  color: var(--cp-ink);
+  container-type: size;
+}
+.cp-ring-progress {
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cp-ring-glow {
+  opacity: 0;
+  animation: cp-ring-glow 1.6s ease-out;
+}
+@keyframes cp-ring-glow {
+  0% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+.cp-bump {
+  animation: cp-bump 2.4s ease-out forwards;
+}
+@keyframes cp-bump {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12% {
+    opacity: 1;
+    transform: none;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.cp-wheel-node {
+  transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s;
+}
+.cp-wheel-node:hover .cp-wheel-disc {
+  filter: brightness(1.06);
+}
+.cp-pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cp-pulse-ring 2.2s ease-out infinite;
+}
+@keyframes cp-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+.cp-step-line {
+  transition: background-color 0.6s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-ring-progress,
+  .cp-wheel-node,
+  .cp-step-line {
+    transition: none;
+  }
+  .cp-ring-glow,
+  .cp-bump,
+  .cp-pulse-ring,
+  .cp-live-dot[data-state="live"]::after,
+  .cp-toast {
+    animation: none;
+  }
+}

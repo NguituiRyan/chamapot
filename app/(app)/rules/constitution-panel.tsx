@@ -135,7 +135,8 @@ export function ConstitutionPanel({ slug, aiReady, currentRules, currentSettings
       if (!res.ok) throw new Error(body?.error ?? `Reading failed (${res.status})`);
       const data = body as ExtractionResponse;
       setResult(data);
-      setInclude(Object.fromEntries(data.rules.map((r) => [r.key, true])));
+      // Low-confidence rules start unticked: an official must opt in before they're enforced.
+      setInclude(Object.fromEntries(data.rules.map((r) => [r.key, !r.needs_review])));
       setPhase('review');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reading the constitution failed. Try again.');
