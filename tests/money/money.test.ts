@@ -42,6 +42,14 @@ describe('payout rules', () => {
     expect(state.tables.chama_events[0].summary).toContain('Refused payout to Grace');
     expect(fetch).not.toHaveBeenCalled();
   });
+  it('refuses a non-member ("my cousin Jane") with the same 409 rotation rule', async () => {
+    const response = await route(() => proposePayout({ slug: 'umoja-sisters', recipientHandle: 'jane' }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ rule: 'payout_recipient', error: expect.stringContaining('"jane" is not a member of Umoja Sisters') });
+    expect(state.tables.chama_events[0].summary).toContain('not a member');
+    expect(state.tables.chama_payouts).toHaveLength(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('forbids the recipient even when she is an official', async () => {
     state.tables.chama_members[0].role = 'chair';
     const response = await route(() => approvePayout(payoutId, { memberHandle: 'wanjiru', decision: 'approve' }));

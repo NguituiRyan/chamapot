@@ -93,7 +93,7 @@ export async function remindContribution(id: string, actor: string) {
   return { reminded: true, ...result, last_reminded_at: at };
 }
 export function assertRecipient(cycle: ChamaCycle, recipient: ChamaMember) {
-  if (recipient.id !== cycle.recipient_member_id) throw new MoneyError(409, `Payout refused: ${recipient.full_name} is not scheduled to receive cycle ${cycle.number}. The constitution's rotation rule requires the scheduled recipient.`, 'payout_recipient');
+  if (recipient.id !== cycle.recipient_member_id) throw new MoneyError(409, `Payout refused: ${recipient.full_name} is not scheduled to receive cycle ${cycle.number}. The constitution's rotation rule (Article 3.2) gives the pot only to the member whose turn it is.`, 'payout_recipient');
 }
 export function assertVoter(payout: ChamaPayout, member: ChamaMember) {
   if (!['chair', 'treasurer', 'secretary'].includes(member.role)) throw new MoneyError(403, 'Only officials may approve a payout');
@@ -109,7 +109,13 @@ export async function proposePayout(input: { slug: string; cycleId?: string; rec
   const cycle = s.cycles.find(c => c.id === (input.cycleId ?? s.currentCycleId));
   if (!cycle) throw new MoneyError(404, 'Cycle not found');
   const recipient = input.recipientHandle ? s.members.find(m => m.handle === input.recipientHandle) : s.members.find(m => m.id === cycle.recipient_member_id);
-  if (!recipient) throw new MoneyError(404, 'Recipient not found');
+  if (!recipient) {
+    // Not a member at all (e.g. "pay my cousin Jane"): same rotation rule, refused before anything else.
+    const scheduled = s.members.find(m => m.id === cycle.recipient_member_id);
+    const name = input.recipientHandle!.trim().slice(0, 60);
+    await logEvent(s.group.id, 'payout', 'treasurer-agent', `Refused payout to "${name}" for cycle ${cycle.number}: not a member`, { rule: 'payout_recipient', requested: name });
+    throw new MoneyError(409, `Payout refused: "${name}" is not a member of ${s.group.name}. The constitution's rotation rule (Article 3.2) gives cycle ${cycle.number}'s pot only to ${scheduled?.full_name ?? 'the scheduled member'}.`, 'payout_recipient');
+  }
   try { assertRecipient(cycle, recipient); } catch (error) { await logEvent(s.group.id, 'payout', 'treasurer-agent', `Refused payout to ${recipient.full_name} for cycle ${cycle.number}`, { rule: 'payout_recipient' }); throw error; }
   const amount = await potAmount(cycle.id);
   const existing = checked(await db().from('chama_payouts').select('*').eq('cycle_id', cycle.id).maybeSingle());

@@ -28,8 +28,8 @@ Next.js 16.3.6 App Router (read `node_modules/next/dist/docs/` — this Next has
 React 19.2, Tailwind 4, TypeScript. ag-studio / ag-studio-react **3.1.0**, ag-grid-community/react 36.3.0.
 `ai` 7 + `@ai-sdk/anthropic` 4 + `@ai-sdk/react` 4, `zod` 4, `@supabase/supabase-js`, `@paypal/paypal-server-sdk`
 2.5.0 (APIMatic-generated), `@paypal/agent-toolkit` 1.11, `lucide-react`, `server-only`, dev: `vitest`, `tsx`.
-Claude models: default `claude-sonnet-5-5` (env `CHAMAPOT_MODEL`); constitution extraction may use
-`claude-opus-5-5` (env `CHAMAPOT_EXTRACT_MODEL`). Provider: `@ai-sdk/anthropic` with `ANTHROPIC_API_KEY`.
+Claude model: **`claude-sonnet-5-5` everywhere** (team decision) — env `CHAMAPOT_MODEL` for the Treasurer agent,
+`CHAMAPOT_EXTRACT_MODEL` for constitution extraction. Provider: `@ai-sdk/anthropic` with `ANTHROPIC_API_KEY`.
 
 ## Shared code (coordinator-owned; import, don't fork)
 - `lib/chama/types.ts` — row types + `ChamaSnapshot`, `DEMO_GROUP_SLUG`.
@@ -46,6 +46,15 @@ Claude models: default `claude-sonnet-5-5` (env `CHAMAPOT_MODEL`); constitution 
 | AG Studio dashboard | **Agent A** | `app/dashboard/**` except the AI files below; delete `lib/dashboard-data.ts` |
 | Claude adapter + Treasurer agent | **Agent C** | `app/dashboard/studio/ai.ts`, `app/dashboard/studio/claude-adapter.ts`, `app/dashboard/studio/treasurer/**`, `app/api/ai/claude/**`, `lib/ai.ts`, `lib/rate-limit.ts`; delete `app/dashboard/studio/openai-adapter.ts` and `app/api/ai/responses` |
 | Experience (landing, rules, approvals, members, activity) | **Agent D** | `app/page.tsx`, `app/(app)/**`, `app/not-found.tsx`, `app/globals.css`, `app/layout.tsx` (keep footer), `components/**` (except site-footer), `app/api/ai/extract-rules/**`, `app/api/chama/rules/**`, `public/**` |
+
+Fixed module contracts between Agent A and Agent C:
+- `lib/ai.ts` (C) exports `aiEnabled(): boolean` (true when `ANTHROPIC_API_KEY` is set) and `aiModels(): string[]`
+  (first = default). `app/dashboard/page.tsx` (A) passes `aiModels={aiEnabled() ? aiModels() : undefined}`.
+- `app/dashboard/studio/ai.ts` (C) exports `buildAi(options: { models: string[]; slug: string }): AgAiHarnessSetup`.
+  `dashboard.tsx` (A) passes the result to Studio's `ai` prop exactly like the starter does.
+- Custom widget types (A) are registered in `app/dashboard/studio/widgets/index.ts` as `chamaWidgets`; each has
+  `formatShape` + `ai` so Studio's built-in Widget/Page agents (and C's Treasurer) can place them.
+- Member drill-through/links go to `/members/[handle]` (D). Approvals UI is `/approvals` (D).
 
 Integration points between owners are the HTTP routes below and the shared types. If you need something
 from another owner, code against the contract and leave a `// CONTRACT:` note; the coordinator integrates.

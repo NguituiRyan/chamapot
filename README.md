@@ -1,91 +1,71 @@
-> [!TIP]
-> **PayPal AI Hackathon**
-> 
-> Win part of $69,750 in total prizes
-> 
-> Build What's Next with PayPal and AI is a global online hackathon inviting developers, designers, founders, students, and builders to create something new using PayPal and AI.
-> 
-> There are no prescribed problem statements and no set of tracks. Build an agent, an app, an automation, a new payment experience, a business tool, a social product, or something we haven't thought of yet.
-> 
-> https://paypalaihackathon.devpost.com
+# ChamaPot — the AI treasurer for your chama
 
-# PayPal SDK data pages
+> PayPal AI Hackathon 2026 entry. A chama (rotating savings group) runs its whole money cycle on PayPal:
+> every contribution lives on a PayPal invoice, verified PayPal webhooks update the books live, a Claude
+> **Treasurer agent** inside an **AG Studio 3.1** dashboard chases payments and proposes payouts, two
+> officials approve, and **PayPal Payouts** sends the pot. The AI never moves money.
 
-A Next.js app that reads PayPal sandbox data over the [PayPal REST API](https://developer.paypal.com/api/rest/) and shows it two ways:
+## For judges
 
-- **Endpoint pages**: one [AG Grid](https://www.ag-grid.com/react-data-grid/) per PayPal endpoint the demo calls, showing what each returns.
-- **Dashboard** (`/dashboard`): an [AG Studio](https://www.ag-grid.com/studio/) report over all of that data, joined together, which you can edit and save in the browser.
+| | |
+|---|---|
+| Live demo | https://chamapot.rytrix.co.ke (PayPal **sandbox**; no real money) |
+| Demo chama | Umoja Sisters: 10 women in Nairobi, London, Dallas, Dubai, Minneapolis and Manchester, $50/month, $500 pot |
+| Sign-in | None. Use **Viewing as** in the header to act as Grace (chair), Akinyi (treasurer), Mumbi (secretary) or a member |
+| Video | _(YouTube link)_ |
+| Pay an invoice yourself | Open a member statement → PayPal invoice link → pay with a PayPal sandbox personal account |
+
+**Try this in two minutes**
+1. `/rules` → **Use the sample constitution** → Claude reads the PDF and extracts the rules with quotes and confidence.
+2. `/dashboard` → right-click Halima → **Record cash payment** → PayPal marks the invoice paid → the webhook flashes the ledger.
+3. `/dashboard` → AI panel → *"Who's behind this cycle?"*, then *"Remind everyone who hasn't paid"* (real PayPal invoice reminders).
+4. When the pot is full → *"Is the pot ready? Propose the payout"* → `/approvals` → approve as Grace, then as Mumbi → PayPal Payouts.
+5. Try *"Pay this month's pot to my cousin Jane instead"* → refused: the rotation rule is enforced in code, not in the prompt.
+
+## How we used PayPal
+
+| PayPal product | Where | Why |
+|---|---|---|
+| Invoicing v2 (create, send, remind, record payment) | `lib/paypal/invoices.ts` | Every contribution, PayPal or cash, is a PayPal invoice, so the books reconcile in one place |
+| Webhooks (self-verified signatures, idempotent) | `app/api/paypal/webhook` | `INVOICING.INVOICE.PAID` and payout events drive the live dashboard |
+| Payouts v1 | `lib/paypal/payouts.ts` | The pot goes to the scheduled member after two officials approve; deterministic `sender_batch_id` so a retry can't pay twice |
+| Orders v2 + JS SDK v6 | member statement, `app/api/chama/fines` | Members pay late fines with the PayPal button |
+| Transaction Search | `app/api/chama/reconcile` | Nightly reconciliation of the ledger against PayPal |
+| PayPal Agent Toolkit | invoice reminders | The agent's reminder tool runs PayPal's own `send_invoice_reminder` |
+| PayPal Server SDK (APIMatic) | `lib/paypal/sdk.ts` | Orders, Payments, Transaction Search, written with APIMatic's Context Plugin (see `docs/apimatic/`) |
+
+## How we used AI
+
+| Model / tool | Role | Limits |
+|---|---|---|
+| Claude (`claude-sonnet-5-5`) | Reads the chama constitution (PDF or photo) into rules with verbatim quotes and confidence | Low-confidence rules are flagged for an official to review |
+| Claude (`claude-sonnet-5-5`) via a custom AG Studio adapter | The Treasurer agent: answers questions, sends PayPal reminders, builds dashboard widgets by delegating to AG Studio's built-in agents, proposes payouts | Can only call the tools we give it; cannot approve or send money |
+| AG Studio 3.1 Agent Framework | Harness, built-in Data / Planning / Page / Widget agents | — |
+
+## Trust and safety
+- **The AI proposes, humans approve, the server pays.** Payout requires two officials; the recipient can't approve her own pot.
+- **Recipient locked to the rotation.** The server refuses any payout to someone not scheduled for the cycle (HTTP 409).
+- **No double payments.** Request ids and `sender_batch_id` are derived from chama + cycle + member.
+- **Verified webhooks only**, deduplicated by event id. Every action is logged to the activity feed.
+- AI endpoints are rate-limited per IP. Keys stay on the server.
+
+## Architecture
+_(diagram)_ Next.js 16 (App Router) on Vercel · Supabase (Postgres + Realtime) · PayPal sandbox REST · Claude via AI SDK 7 · AG Studio 3.1.
 
 ## Run locally
-
-Requires Node.js 20.9 or later and a PayPal sandbox REST app ([developer.paypal.com](https://developer.paypal.com/dashboard/applications/sandbox)). The transactions and balances pages also need the app's **Transaction search** feature enabled.
-
 ```bash
 npm install
-cp env.example .env.local   # then fill in the values
+cp .env.example .env.local   # fill in PayPal sandbox, Anthropic, Supabase and AG Studio values
 npm run dev
 ```
+Database: apply `supabase/migrations/0001_chamapot.sql`, then `supabase/seed.sql`. Then `npm run seed:paypal`
+creates real sandbox invoices for the current cycle and `npm run paypal:webhook` registers the webhook.
 
-Open [http://localhost:3000](http://localhost:3000). Next.js only loads the dotted `.env.local`; it is git-ignored, so credentials stay out of the repo.
+## What's real and what's seeded
+Cycles 1–6 are seeded history (flagged `is_seed`). Everything in the current cycle is live PayPal sandbox:
+invoices, reminders, cash recorded against invoices, webhooks, payouts and fines. Payouts go to a sandbox
+personal account standing in for the member.
 
-Other scripts: `npm run build` (production build), `npm run start` (serve the build), `npm run lint`.
-
-### AG Studio licence (optional)
-
-Set `AG_STUDIO` in `.env.local` to your AG Studio licence key. The dashboard passes it to `AgStudioProvider`.
-
-### AI assistant (optional)
-
-The AG Studio dashboard at `/dashboard` has an AI assistant backed by OpenAI. The key is taken from the first of these that is set; with neither, the assistant is hidden:
-
-1. `AG_STUDIO_OPENAI_API_KEY`, specific to this app. Put it in `.env.local` to choose the key for this demo.
-2. `OPENAI_API_KEY`, the name OpenAI's own tools use. If you already export one (e.g. in `~/.zshrc`), the demo uses it with no setup, and spends against it.
-
-A separate name is needed because Next.js prefers variables already in the environment over `.env.local`, so a globally exported `OPENAI_API_KEY` can't be overridden per project. The server logs which variable it used (never the key) the first time the assistant is configured.
-
-`OPENAI_MODELS` lists the model ids the assistant may use, comma-separated, first one the default (`gpt-5.4-mini` when unset); with two or more, the chat offers a model picker.
-
-The key never reaches the browser. Studio's adapter ([`openai-adapter.ts`](app/dashboard/studio/openai-adapter.ts), copied from the AG Studio docs) runs client-side and posts to this app's own [`/api/ai/responses`](app/api/ai/responses/route.ts), which adds the key, only allows the configured models, caps output tokens, and streams OpenAI's reply back.
-
-In production `.env.local` isn't deployed: set the variable in your host's environment (e.g. Vercel project settings, `docker run --env-file`, or a secrets manager), as with the PayPal credentials. The route has no auth or rate limiting, so don't deploy it publicly with a real key without adding one.
-
-## How it works
-
-```
-lib/paypal.ts            Every PayPal call: OAuth token, paging, retries, response types
-lib/dashboard-data.ts    Turns those responses into the dashboard's related tables
-app/(endpoints)/         One page per endpoint, each rendering an AG Grid
-app/dashboard/           The AG Studio dashboard
-app/api/ai/responses/    Server-side proxy for the dashboard's AI assistant
-```
-
-[`lib/paypal.ts`](lib/paypal.ts) calls the REST API with plain `fetch`, no SDK. It gets an OAuth access token with the client-credentials grant and caches it until just before it expires. It follows `page`/`total_pages` paging, and retries on 401, 429 and 5xx responses. Its types are hand-written for the fields this demo reads, in the API's own snake_case.
-
-Every page is a server component that calls `await connection()`, so it renders per request with live data instead of being prerendered at build time. PayPal credentials never leave the server.
-
-## Endpoint pages
-
-Each page in [`app/(endpoints)`](app/(endpoints)) calls one function in `lib/paypal.ts`, maps the response to flat rows, and passes them with plain column definitions to the shared [`DataGrid`](app/(endpoints)/data-grid.tsx). The page header shows the REST calls behind it.
-
-| Page | `lib/paypal.ts` function | REST calls |
-|---|---|---|
-| [`/products`](app/(endpoints)/products/page.tsx) | `listProducts()` | `GET /v1/catalogs/products`, then `GET /v1/catalogs/products/{id}` per product |
-| [`/plans`](app/(endpoints)/plans/page.tsx) | `listPlans()` | `GET /v1/billing/plans`, then `GET /v1/billing/plans/{id}` per plan |
-| [`/invoices`](app/(endpoints)/invoices/page.tsx) | `listInvoices()` | `GET /v2/invoicing/invoices`, then `GET /v2/invoicing/invoices/{id}` per invoice |
-| [`/transactions`](app/(endpoints)/transactions/page.tsx) | `searchTransactions(start, end)` | `GET /v1/reporting/transactions` |
-| [`/balances`](app/(endpoints)/balances/page.tsx) | `getBalances()` | `GET /v1/reporting/balances` |
-
-Things worth knowing about these endpoints:
-
-- **List endpoints return summaries.** Products have no type or category, plans no billing cycles, and invoices no line items, payments or refunds. So each record is fetched again in full, which is why these pages take a second or two.
-- **Billing plans keep their price in `billing_cycles`.** There is an optional `TRIAL` cycle, then the `REGULAR` cycle; `total_cycles: 0` means it bills until cancelled.
-- **Transaction Search covers at most 31 days per request** and rejects fractional seconds in dates. New activity can take up to three hours to appear. `fields=all` adds `payer_info` to each `transaction_info`. Event codes are [PayPal T-codes](https://developer.paypal.com/docs/transaction-search/transaction-event-codes/) (`T0001` = payout); status is `S` success, `P` pending, `D` denied, `V` reversed or `F` partially refunded.
-- **Amounts are decimal strings with a currency**, e.g. `{ "value": "2.99", "currency_code": "USD" }`. `amountOf()` turns them into numbers, and the grid formats money columns in each row's currency.
-
-### The grid
-
-Pages are server components, so the column definitions they pass to the grid must be plain data, with no functions. Money columns use the `type: 'money'` column type, defined in `data-grid.tsx`, which formats the value in the row's `currency`. Date columns use AG Grid's built-in `cellDataType: 'dateString'` or `'dateTimeString'`. Every column can be sorted and filtered, and the search box filters across all columns.
-
-## Dashboard
-
-[`/dashboard`](app/dashboard/page.tsx) fetches all five endpoints at once. [`lib/dashboard-data.ts`](lib/dashboard-data.ts) turns them into related tables: customers, invoices, invoice line items, invoice payments, products, plans, transactions, payouts and balances. AG Studio's data sources, relationships, theme, default report and AI assistant are configured in [`app/dashboard/studio`](app/dashboard/studio). Reports you create or edit are saved in the browser's localStorage.
+## Credits
+Started from PayPal's AG Studio hackathon starter (`paypaldev/hackathon-paypal-ag-grid-boilerplate`) and rebuilt
+for chamas. MIT licence. Built by [Rytrix](https://rytrix.co.ke).
