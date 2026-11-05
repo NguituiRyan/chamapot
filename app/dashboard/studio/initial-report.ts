@@ -104,7 +104,7 @@ const thisCycle: Page = {
       },
       sort: [{ field: { id: 'owes' }, direction: 'desc' }],
       format: {
-        ...title('Outstanding this cycle', 'Right-click a member: PayPal reminder, record cash, statement'),
+        ...title('Contributions this cycle', 'Who still owes comes first · right-click a member: PayPal reminder, record cash, statement'),
         style: { columnAutoSize: true, animateValueChanges: true, grandTotalRow: { enabled: false } },
       },
     },
