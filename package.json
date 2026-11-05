@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "seed:paypal": "tsx --env-file=.env.local scripts/seed-paypal.ts",
+    "paypal:webhook": "tsx --env-file=.env.local scripts/register-webhook.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.97",

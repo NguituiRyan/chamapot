@@ -1,66 +1,75 @@
-// PayPal REST client: every call this demo makes to PayPal goes through here. It covers
-// catalog products, billing plans, invoicing, Transaction Search and balances, with plain
-// fetch and no SDK. Server-side only: it reads the client secret from the environment.
+import 'server-only';
 
-const BASE_URL = 'https://api-m.sandbox.paypal.com';
-const MAX_ATTEMPTS = 4;
+export const PAYPAL_BASE_URL = 'https://api-m.sandbox.paypal.com';
 
 export class PayPalApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly path: string,
-    body: string,
-  ) {
-    super(`PayPal ${status} on ${path}: ${body.slice(0, 300)}`);
-    this.name = 'PayPalApiError';
+  readonly debug_id?: string;
+  readonly details?: unknown;
+  constructor(readonly status: number, readonly path: string, body: string | Record<string, unknown>) {
+    let data: Record<string, unknown> = {};
+    try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { /* non-JSON upstream error */ }
+    super(`PayPal ${status} on ${path}: ${String(data.message ?? data.error_description ?? 'request failed')}`);
+    this.name = String(data.name ?? 'PayPalApiError');
+    this.debug_id = typeof data.debug_id === 'string' ? data.debug_id : undefined;
+    this.details = data.details;
   }
+}
+
+export function paypalCredentials() {
+  const id = process.env.PAYPAL_CLIENT_ID?.trim();
+  const secret = process.env.PAYPAL_SECRET?.trim();
+  if (!id || !secret) throw new Error('PayPal sandbox is not configured: set PAYPAL_CLIENT_ID and PAYPAL_SECRET in .env.local');
+  return { id, secret };
 }
 
 let cachedToken: { value: string; expiresAt: number } | undefined;
-
-async function accessToken(): Promise<string> {
+let tokenFlight: Promise<string> | undefined;
+export async function accessToken(): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
-
-  const { PAYPAL_CLIENT_ID: id, PAYPAL_SECRET: secret } = process.env;
-  if (!id || !secret) throw new Error('PAYPAL_CLIENT_ID and PAYPAL_SECRET must be set (see .env.local)');
-
-  const res = await fetch(`${BASE_URL}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new PayPalApiError(res.status, '/v1/oauth2/token', await res.text());
-
-  const { access_token, expires_in } = (await res.json()) as { access_token: string; expires_in: number };
-  // Refresh a minute early so an in-flight request never carries an expired token.
-  cachedToken = { value: access_token, expiresAt: Date.now() + (expires_in - 60) * 1000 };
-  return access_token;
+  if (tokenFlight) return tokenFlight;
+  tokenFlight = (async () => {
+    const { id, secret } = paypalCredentials();
+    const res = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+      method: 'POST', headers: { Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=client_credentials', signal: AbortSignal.timeout(15_000), cache: 'no-store',
+    });
+    if (!res.ok) throw new PayPalApiError(res.status, '/v1/oauth2/token', await res.text());
+    const token = await res.json() as { access_token: string; expires_in: number };
+    if (!token.access_token || !Number.isFinite(token.expires_in)) throw new Error('Invalid PayPal OAuth token response');
+    cachedToken = { value: token.access_token, expiresAt: Date.now() + Math.max(0, token.expires_in - 60) * 1000 };
+    return token.access_token;
+  })();
+  try { return await tokenFlight; } finally { tokenFlight = undefined; }
 }
 
-async function get<T>(path: string): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      headers: { Authorization: `Bearer ${await accessToken()}` },
-      cache: 'no-store',
-    });
-    if (res.ok) return (await res.json()) as T;
-
-    // A revoked or expired token: drop it and mint a new one once.
-    if (res.status === 401 && attempt === 1) {
-      cachedToken = undefined;
-      continue;
+export type PayPalFetchOptions = { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; requestId?: string; timeoutMs?: number };
+export async function paypalFetch<T = Record<string, unknown>>(path: string, options: PayPalFetchOptions = {}): Promise<T> {
+  if (!path.startsWith('/') || path.startsWith('//')) throw new Error('PayPal path must be relative to the sandbox API');
+  const method = options.method ?? 'GET';
+  const safe = ['GET', 'PUT', 'DELETE'].includes(method) || !!options.requestId;
+  for (let attempt = 0; ; attempt++) {
+    // Authentication failures are not treated as operation/network retries.
+    const token = await accessToken();
+    try {
+      const res = await fetch(`${PAYPAL_BASE_URL}${path}`, {
+        method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...(options.requestId ? { 'PayPal-Request-Id': options.requestId } : {}) },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body), cache: 'no-store', signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
+      });
+      const raw = await res.text();
+      if (!res.ok) throw new PayPalApiError(res.status, path, raw);
+      return (raw ? JSON.parse(raw) : {}) as T;
+    } catch (error) {
+      const transient = error instanceof PayPalApiError ? error.status === 429 || error.status >= 500 : error instanceof TypeError || (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name));
+      console.error('[paypal]', { method, path, attempt, status: error instanceof PayPalApiError ? error.status : 'transport', debug_id: error instanceof PayPalApiError ? error.debug_id : undefined });
+      if (!safe || !transient || attempt >= 3) {
+        if (transient && !(error instanceof PayPalApiError)) throw new PayPalApiError(error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 504 : 502, path, { name: 'PAYPAL_TRANSPORT_ERROR', message: 'PayPal transport failed; retry using the same request id' });
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, Math.min(4000, 250 * 2 ** attempt)));
     }
-    if ((res.status === 429 || res.status >= 500) && attempt < MAX_ATTEMPTS) {
-      await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 250));
-      continue;
-    }
-    throw new PayPalApiError(res.status, path, await res.text());
   }
 }
+const get = <T>(path: string) => paypalFetch<T>(path);
 
 // `path` must already carry whatever flag makes the endpoint report `total_pages`.
 async function listAll<T>(path: string, key: string, pageSize: number): Promise<T[]> {
@@ -221,3 +230,4 @@ export type Balances = {
 export function getBalances(): Promise<Balances> {
   return get<Balances>('/v1/reporting/balances');
 }
+

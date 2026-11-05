@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "acp-paypal": {
+      "type": "http",
+      "url": "https://chatbotapi.apimatic.io/mcp/cacdb56c-c789-4017-b820-011496c7ed24/typescript"
+    }
+  }
+}
