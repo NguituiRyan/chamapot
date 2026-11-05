@@ -1,43 +1,46 @@
 # ChamaPot build plan
 
-Deadline Thu 12 Nov 2026 12:00 PST (23:00 EAT). Checkpoint 1: Fri 6 Nov (Claude drives AG Studio, else Bryntum).
+Deadline Thu 12 Nov 2026 12:00 PST (23:00 EAT). Checkpoint 1 (Claude drives AG Studio): **PASSED Thu 5 Nov**.
 Checkpoint 2: Mon 9 Nov (full sandbox loop on the hosted URL, logged out, at 375px).
 
 ## Foundation (coordinator)
 - [x] Starter copied, deps upgraded (AG Studio 3.1, AI SDK 7, Supabase, PayPal SDKs), MIT licence
 - [x] Supabase schema + RLS + realtime (chama_* in shared project), Umoja Sisters demo seed
 - [x] Shared types, snapshot loader, Supabase clients, contracts doc, footer credit
-- [ ] Credentials from the team: PayPal sandbox app, Anthropic key, AG Studio trial key, Supabase secret key
-- [ ] APIMatic context plugin installed (Claude Code + Codex), `.mcp.json` committed
+- [x] Anthropic key (Claude Sonnet 5.5 everywhere)
+- [ ] Credentials from the team: PayPal sandbox app + sandbox personal email, AG Studio trial key, Supabase secret key
+- [x] APIMatic context plugin installed (Claude Code + Codex), `.mcp.json` committed
 
 ## Money layer (Codex)
-- [ ] PayPal REST helper (token reuse, request ids derived from chama/cycle/member), Invoicing, Payouts
-- [ ] Webhook route: signature verification, idempotency, invoice paid / payout events
-- [ ] Contribution routes: create invoices, record cash, remind (Agent Toolkit)
-- [ ] Payout routes: propose (recipient rule), approve (2 officials) -> Payouts, status refresh
-- [ ] Fines via Orders v2 + reconcile via Transaction Search (paypal-server-sdk)
-- [ ] Scripts: seed:paypal, paypal:webhook; vitest tests; docs/apimatic evidence
+- [x] PayPal REST helper (token reuse, deterministic request ids), Invoicing, Payouts
+- [x] Webhook route: self-verified signatures, idempotency, invoice paid / payout events
+- [x] Contribution routes: create invoices, record cash, remind (Agent Toolkit + REST fallback)
+- [x] Payout routes: propose (rotation rule, 409 incl. non-members), approve (2 officials) -> Payouts, status
+- [x] Fines via Orders v2 + reconcile via Transaction Search (paypal-server-sdk)
+- [x] Scripts: seed:paypal, paypal:webhook; 26 vitest tests; docs/apimatic evidence
+- [ ] Live sandbox run (needs PayPal + Supabase secret)
 
 ## AG Studio dashboard (Agent A)
-- [ ] Chama data model in Studio (members, cycles, contributions, payouts, rules) with descriptions
-- [ ] Report: This cycle / Ledger / Payouts & approvals / Rules; ChamaPot theme
-- [ ] Custom widgets: pot progress, rotation wheel, approval tracker
-- [ ] Live data: Supabase realtime -> applyTransaction (cells flash)
-- [ ] Context menu (send reminder / record cash), drill-through to member statement, 375px layout
+- [x] Chama data model in Studio with descriptions, measures, relationships
+- [x] Report: This cycle / Ledger / Payouts & approvals / Rules; ChamaPot theme
+- [x] Custom widgets: pot progress, rotation wheel, approval tracker (formatShape + ai)
+- [x] Live data: Supabase realtime -> applyTransaction (cells flash) + 20s polling fallback
+- [x] Context menu (reminder / record cash / statement), drill-through, focus mode, 375px layout
 
 ## Treasurer agent (Agent C)
-- [ ] Claude adapter for the Studio Direct LLM Runner + /api/ai/claude (rate limited)
-- [ ] Custom primary Treasurer agent delegating to built-in Data/Planning/Page/Widget agents
-- [ ] Chama tools: late members, rotation status, send reminder, propose payout; aiToolDisplay labels
+- [x] Claude adapter for the Studio Direct LLM Runner + /api/ai/claude (rate limited)
+- [x] Custom primary Treasurer agent delegating to built-in Data/Planning/Page/Widget agents
+- [x] Chama tools + display labels; verified live on /dashboard ("Who's behind this cycle?")
 
 ## Experience (Agent D)
-- [ ] Landing page (story, how it works, Built with PayPal + Claude + AG Studio)
-- [ ] Rules: upload constitution -> Claude extraction with quotes + confidence -> apply
-- [ ] Approvals page with role switcher; member statement (pay fine with PayPal JS SDK v6); activity feed
-- [ ] App shell/nav, 404, 375px, footer everywhere
+- [x] Landing page with live pot preview
+- [x] Rules: constitution -> Claude extraction with quotes, confidence, review flags (verified live)
+- [x] Approvals, member statements (JS SDK v6 fine button), realtime activity feed, role switcher
+- [x] App shell/nav, 404, 375px, footer everywhere
 
 ## Integration and ship (coordinator)
-- [ ] Integrate, `npm run build`, fix
-- [ ] GitHub repo NguituiRyan/chamapot, Vercel deploy, chamapot.rytrix.co.ke, register PayPal webhook
+- [x] Integrate, `npm run build` passes, browser check desktop + 375px
+- [ ] `npm run seed:paypal` (real invoices for cycle 7), Vercel deploy, chamapot.rytrix.co.ke, `npm run paypal:webhook`
 - [ ] End-to-end sandbox loop on the hosted URL; 375px check; Codex review
-- [ ] README "For judges", Devpost story, demo video script
+- [ ] README final (architecture diagram, video link), Devpost story, demo video script
+- [ ] GitHub repo NguituiRyan/chamapot made public for submission
