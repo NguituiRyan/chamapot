@@ -40,7 +40,11 @@ Checkpoint 2: Mon 9 Nov (full sandbox loop on the hosted URL, logged out, at 375
 
 ## Integration and ship (coordinator)
 - [x] Integrate, `npm run build` passes, browser check desktop + 375px
-- [ ] `npm run seed:paypal` (real invoices for cycle 7), Vercel deploy, chamapot.rytrix.co.ke, `npm run paypal:webhook`
+- [x] Vercel deploy (project `chamapot`, framework pinned in vercel.json), live at https://chamapot.rytrix.co.ke
+- [x] Private GitHub repo NguituiRyan/chamapot
+- [ ] Add PayPal / Supabase secret / AG Studio env vars on Vercel, redeploy
+- [ ] `npm run seed:paypal` (real invoices for cycle 7), `npm run paypal:webhook` (webhook -> PAYPAL_WEBHOOK_ID)
+- [ ] Dashboard first-load speed (AG Studio bundle; consider Vercel region dub1 next to Supabase eu-west-1)
 - [ ] End-to-end sandbox loop on the hosted URL; 375px check; Codex review
 - [ ] README final (architecture diagram, video link), Devpost story, demo video script
 - [ ] GitHub repo NguituiRyan/chamapot made public for submission
