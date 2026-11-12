@@ -12,7 +12,7 @@
 | Live demo | https://chamapot.rytrix.co.ke (PayPal **sandbox**; no real money) |
 | Demo chama | Umoja Sisters: 10 women in Nairobi, London, Dallas, Dubai, Minneapolis and Manchester, $50/month, $500 pot |
 | Sign-in | None. Use **Viewing as** in the header to act as Grace (chair), Akinyi (treasurer), Mumbi (secretary) or a member |
-| Video | _(YouTube link)_ |
+| Video | On the Devpost submission page (YouTube, under 3 minutes) |
 | Pay an invoice yourself | Open a member statement → PayPal invoice link → pay with a PayPal sandbox personal account |
 
 **Try this in two minutes**
@@ -50,7 +50,20 @@
 - AI endpoints are rate-limited per IP. Keys stay on the server.
 
 ## Architecture
-_(diagram)_ Next.js 16 (App Router) on Vercel · Supabase (Postgres + Realtime) · PayPal sandbox REST · Claude via AI SDK 7 · AG Studio 3.1.
+```
+ Browser (Next.js 16 on Vercel)                         Server routes (Vercel Functions)
+ ┌──────────────────────────────┐   tool calls   ┌───────────────────────────────────────────┐
+ │ AG Studio 3.1 dashboard      │ ─────────────► │ /api/ai/claude  → Claude Sonnet 5.5        │
+ │  + Claude Treasurer agent    │                │ /api/ai/extract-rules → Claude (PDF/photo) │
+ │ Rules · Approvals · Activity │ ─────────────► │ /api/chama/*  money rules, 2 approvals,    │
+ └──────────────▲───────────────┘                │               rotation lock (409)          │
+                │ realtime                       └──────┬──────────────────────────▲──────────┘
+        ┌───────┴────────┐  writes (secret key)         │ REST + Server SDK         │ webhooks
+        │ Supabase       │ ◄────────────────────────────┤                           │ (self-verified,
+        │ Postgres +     │                              ▼                           │  de-duplicated)
+        │ Realtime       │                    PayPal sandbox: Invoicing v2, Payouts v1,
+        └────────────────┘                    Orders v2, Transaction Search, Agent Toolkit
+```
 
 ## Run locally
 ```bash
